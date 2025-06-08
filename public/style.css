@@ -2,7 +2,7 @@ html, body {
     height: 100%;
     margin: 0;
     font-family: Arial, sans-serif;
-    background: linear-gradient(135deg, #ff9800, #ff5722);
+    background: linear-gradient(135deg, #ff6d00, #bf360c);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -11,37 +11,38 @@ html, body {
 
 .container {
     width: 90%;
-    max-width: 400px;
+    max-width: 420px;
 }
 
 .logo {
-    width: 100px;
-    height: 100px;
+    width: 150px;
+    height: 150px;
     margin-bottom: 20px;
 }
 
 .form input {
     width: 100%;
-    padding: 10px;
-    margin: 10px 0;
+    padding: 12px;
+    margin: 12px 0;
     border: none;
-    border-radius: 4px;
-    transition: transform 0.2s ease-out;
+    border-radius: 6px;
+    transition: transform 0.2s ease-out, box-shadow 0.2s;
 }
 
 .form input:focus {
-    transform: translateY(-4px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    transform: translateY(-6px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
 }
 
 .btn {
     display: inline-block;
-    padding: 10px 20px;
-    margin: 10px 0;
-    color: white;
-    background: #ff5722;
+    padding: 14px 24px;
+    margin: 12px 0;
+    font-size: 1rem;
+    color: #fff;
+    background: #e65100;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     text-decoration: none;
     cursor: pointer;
     transition: transform 0.1s ease-in, background 0.2s;
@@ -49,21 +50,21 @@ html, body {
 
 .btn:hover {
     transform: scale(1.05);
-    background: #e64a19;
+    background: #bf360c;
 }
 
 .download {
-    background: #1976d2;
+    background: #37474f;
 }
 
 .download:hover {
-    background: #0d47a1;
+    background: #263238;
 }
 
 @media (max-width: 480px) {
     .logo {
-        width: 80px;
-        height: 80px;
+        width: 120px;
+        height: 120px;
     }
 }
 

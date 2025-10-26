@@ -1,21 +1,625 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" class="dark">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GML Launcher Registration</title>
+    <title>Anycast Control Panel</title>
+    <link rel="icon" type="image/png" href="icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet"
+    />
     <link rel="stylesheet" href="style.css" />
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+    <script defer src="https://unpkg.com/lucide@latest"></script>
+    <script defer src="script.js"></script>
 </head>
-<body>
-    <div class="container">
-        <img src="icon.png" alt="Logo" class="logo" />
-        <form id="registerForm" class="form">
-            <input type="text" id="username" placeholder="Логин" required />
-            <input type="password" id="password" placeholder="Пароль" required />
-            <button type="submit" class="btn">Зарегистрироваться</button>
-        </form>
-        <a href="/download" class="btn download">Скачать лаунчер</a>
+<body class="dark:bg-slate-950 dark:text-slate-100">
+    <div id="app">
+        <!-- Authentication Portal -->
+        <section id="auth" class="auth-screen active">
+            <div class="auth-card glass-panel">
+                <div class="auth-brand">
+                    <img src="icon.png" alt="Anycast" />
+                    <h1>Anycast Control Panel</h1>
+                    <p>Управляйте игровой инфраструктурой без BGP как профессионал</p>
+                </div>
+                <div class="auth-tabs">
+                    <button class="auth-tab active" data-target="loginForm">Вход</button>
+                    <button class="auth-tab" data-target="registerForm">Регистрация</button>
+                </div>
+                <form id="loginForm" class="auth-form active">
+                    <label>
+                        Email
+                        <input type="email" name="email" placeholder="you@example.com" required />
+                    </label>
+                    <label>
+                        Пароль
+                        <input type="password" name="password" placeholder="••••••••" required minlength="8" />
+                    </label>
+                    <div class="auth-options">
+                        <label class="remember">
+                            <input type="checkbox" name="remember" />
+                            Запомнить меня
+                        </label>
+                        <button type="button" class="link" id="forgotPasswordBtn">Забыли пароль?</button>
+                    </div>
+                    <button type="submit" class="btn primary">
+                        <i data-lucide="log-in"></i>
+                        Войти
+                    </button>
+                    <button type="button" class="btn secondary oauth">
+                        <i data-lucide="google"></i>
+                        Войти через Google
+                    </button>
+                </form>
+                <form id="registerForm" class="auth-form">
+                    <label>
+                        Email
+                        <input type="email" name="email" placeholder="admin@example.com" required />
+                    </label>
+                    <label>
+                        Пароль
+                        <input type="password" name="password" placeholder="Минимум 8 символов" required minlength="8" />
+                    </label>
+                    <label>
+                        Подтверждение пароля
+                        <input type="password" name="confirmPassword" placeholder="Повторите пароль" required minlength="8" />
+                    </label>
+                    <button type="submit" class="btn primary">
+                        <i data-lucide="user-plus"></i>
+                        Создать аккаунт
+                    </button>
+                </form>
+                <form id="forgotPasswordForm" class="auth-form">
+                    <p>Введите email, чтобы получить ссылку для сброса</p>
+                    <label>
+                        Email
+                        <input type="email" name="email" placeholder="support@example.com" required />
+                    </label>
+                    <div class="form-actions">
+                        <button type="button" class="btn ghost" data-action="backToLogin">Назад</button>
+                        <button type="submit" class="btn primary">
+                            <i data-lucide="mail"></i>
+                            Отправить ссылку
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- Main Application -->
+        <div id="shell" class="app-shell hidden">
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <div class="logo-group">
+                        <img src="icon.png" alt="Logo" />
+                        <div>
+                            <h2>Anycast Control</h2>
+                            <span>Anycast без BGP</span>
+                        </div>
+                    </div>
+                    <button id="themeToggle" class="icon-btn" aria-label="Переключить тему">
+                        <i data-lucide="moon"></i>
+                    </button>
+                </div>
+                <nav>
+                    <button class="nav-item active" data-section="dashboard">
+                        <i data-lucide="layout-dashboard"></i>
+                        Дашборд
+                    </button>
+                    <button class="nav-item" data-section="entryPoints">
+                        <i data-lucide="server"></i>
+                        Entry Points
+                    </button>
+                    <button class="nav-item" data-section="routes">
+                        <i data-lucide="network"></i>
+                        Маршруты
+                    </button>
+                    <button class="nav-item" data-section="monitoring">
+                        <i data-lucide="activity"></i>
+                        Мониторинг
+                    </button>
+                    <button class="nav-item" data-section="analytics">
+                        <i data-lucide="line-chart"></i>
+                        Аналитика
+                    </button>
+                    <button class="nav-item" data-section="settings">
+                        <i data-lucide="settings"></i>
+                        Настройки
+                    </button>
+                    <button class="nav-item" data-section="documentation">
+                        <i data-lucide="book-open"></i>
+                        Документация
+                    </button>
+                </nav>
+                <div class="sidebar-footer">
+                    <button class="btn ghost" id="pwaInstall">
+                        <i data-lucide="download"></i>
+                        Установить PWA
+                    </button>
+                </div>
+            </aside>
+            <main class="main">
+                <header class="topbar">
+                    <div class="search">
+                        <i data-lucide="search"></i>
+                        <input type="search" placeholder="Поиск по нодам, маршрутам, клиентам..." />
+                    </div>
+                    <div class="topbar-actions">
+                        <button class="icon-btn" id="commandPalette" title="Поиск (Ctrl + K)">
+                            <i data-lucide="command"></i>
+                        </button>
+                        <button class="icon-btn" id="notifications" data-count="4">
+                            <i data-lucide="bell"></i>
+                        </button>
+                        <div class="balance">
+                            <span>Pro план</span>
+                            <strong>Осталось 2.3 ТБ</strong>
+                        </div>
+                        <button class="profile" id="profileMenuBtn">
+                            <img src="https://avatars.dicebear.com/api/initials/AC.svg" alt="User" />
+                            <div>
+                                <span>Алексей Игровой</span>
+                                <small>Owner</small>
+                            </div>
+                            <i data-lucide="chevron-down"></i>
+                        </button>
+                    </div>
+                </header>
+
+                <section id="dashboard" class="page active">
+                    <div class="grid stats">
+                        <article class="stat-card">
+                            <div class="stat-header">
+                                <h3>Общий трафик</h3>
+                                <span>Гб/с</span>
+                            </div>
+                            <strong id="trafficTotal">182.4</strong>
+                            <div class="sparkline" data-chart="traffic"></div>
+                            <footer>+12% за последние 24 часа</footer>
+                        </article>
+                        <article class="stat-card">
+                            <div class="stat-header">
+                                <h3>Активные соединения</h3>
+                                <span>Real-time</span>
+                            </div>
+                            <strong id="connectionsTotal">12 482</strong>
+                            <div class="sparkline" data-chart="connections"></div>
+                            <footer>+2 134 за час</footer>
+                        </article>
+                        <article class="stat-card">
+                            <div class="stat-header">
+                                <h3>Entry Points</h3>
+                                <span>Онлайн</span>
+                            </div>
+                            <strong id="entryPointStatus">14 / 15</strong>
+                            <div class="sparkline" data-chart="uptime"></div>
+                            <footer>Uptime 99.992%</footer>
+                        </article>
+                        <article class="stat-card">
+                            <div class="stat-header">
+                                <h3>DDoS заблокировано</h3>
+                                <span>Атаки</span>
+                            </div>
+                            <strong id="ddosBlocked">328</strong>
+                            <div class="sparkline" data-chart="ddos"></div>
+                            <footer>Последняя атака 4 мин назад</footer>
+                        </article>
+                    </div>
+
+                    <div class="card full live-chart">
+                        <header>
+                            <div>
+                                <h2>Live трафик</h2>
+                                <p>Данные обновляются каждые 3 секунды</p>
+                            </div>
+                            <div class="controls">
+                                <select id="metricSelector">
+                                    <option value="traffic">Трафик</option>
+                                    <option value="cpu">CPU</option>
+                                    <option value="connections">Соединения</option>
+                                    <option value="latency">Latency</option>
+                                </select>
+                                <select id="timeRange">
+                                    <option value="1h">1 час</option>
+                                    <option value="24h">24 часа</option>
+                                    <option value="7d">7 дней</option>
+                                </select>
+                            </div>
+                        </header>
+                        <canvas id="trafficChart"></canvas>
+                    </div>
+                </section>
+
+                <section id="entryPoints" class="page">
+                    <div class="page-header">
+                        <div>
+                            <h2>Entry Points</h2>
+                            <p>Управляйте инфраструктурой edge-нод</p>
+                        </div>
+                        <button class="btn primary" id="addEntryPoint">
+                            <i data-lucide="plus"></i>
+                            Добавить ноду
+                        </button>
+                    </div>
+                    <div class="card table-wrapper">
+                        <table class="data-table" aria-label="Entry Points">
+                            <thead>
+                                <tr>
+                                    <th>Статус</th>
+                                    <th>Название</th>
+                                    <th>Локация</th>
+                                    <th>Публичный IP</th>
+                                    <th>WireGuard IP</th>
+                                    <th>Трафик</th>
+                                    <th>CPU</th>
+                                    <th>RAM</th>
+                                    <th>Latency</th>
+                                    <th>Uptime</th>
+                                    <th>Пиры</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="entryPointRows"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section id="routes" class="page">
+                    <div class="page-header">
+                        <div>
+                            <h2>Маршруты</h2>
+                            <p>Anycast маршруты и поддомены клиентов</p>
+                        </div>
+                        <button class="btn primary" id="createRoute">
+                            <i data-lucide="plus"></i>
+                            Создать маршрут
+                        </button>
+                    </div>
+                    <div class="card table-wrapper">
+                        <table class="data-table" aria-label="Routes">
+                            <thead>
+                                <tr>
+                                    <th>Статус</th>
+                                    <th>Поддомен</th>
+                                    <th>Клиент</th>
+                                    <th>Протокол</th>
+                                    <th>HAProxy</th>
+                                    <th>Соединения</th>
+                                    <th>Трафик</th>
+                                    <th>Latency</th>
+                                    <th>Создан</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="routeRows"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section id="monitoring" class="page">
+                    <div class="grid monitoring-grid">
+                        <div class="card map-card">
+                            <header>
+                                <h2>Глобальная карта</h2>
+                                <p>WireGuard mesh и нагрузка</p>
+                            </header>
+                            <canvas id="mapCanvas" width="800" height="480" aria-label="Live map"></canvas>
+                        </div>
+                        <div class="card metrics-card">
+                            <header>
+                                <h2>Live метрики</h2>
+                            </header>
+                            <ul id="liveMetrics" class="metric-list"></ul>
+                        </div>
+                        <div class="card ddos-card">
+                            <header>
+                                <h2>DDoS Dashboard</h2>
+                                <p>Атаки в реальном времени</p>
+                            </header>
+                            <div id="ddosFeed" class="ddos-feed"></div>
+                        </div>
+                        <div class="card alerts-card">
+                            <header>
+                                <h2>Алерты</h2>
+                                <button class="btn ghost small" id="alertSettings">Настройки</button>
+                            </header>
+                            <div id="alertsList" class="alerts-list"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="analytics" class="page">
+                    <div class="grid analytics-grid">
+                        <div class="card">
+                            <header><h2>Трафик</h2></header>
+                            <canvas id="trafficHistory"></canvas>
+                        </div>
+                        <div class="card">
+                            <header><h2>Топ маршруты</h2></header>
+                            <canvas id="topRoutes"></canvas>
+                        </div>
+                        <div class="card">
+                            <header><h2>Страны</h2></header>
+                            <canvas id="countryDistribution"></canvas>
+                        </div>
+                        <div class="card">
+                            <header><h2>Peak hours</h2></header>
+                            <canvas id="heatmap"></canvas>
+                        </div>
+                        <div class="card">
+                            <header><h2>Сравнение Entry Points</h2></header>
+                            <canvas id="entryPointComparison"></canvas>
+                        </div>
+                        <div class="card stats-card">
+                            <header><h2>Ключевые показатели</h2></header>
+                            <ul id="analyticsStats"></ul>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="settings" class="page">
+                    <div class="settings-grid">
+                        <div class="card">
+                            <header><h2>Профиль</h2></header>
+                            <form class="settings-form">
+                                <label>Имя<input type="text" value="Алексей Игровой" /></label>
+                                <label>Email<input type="email" value="alex@example.com" /></label>
+                                <label>Часовой пояс<select><option>UTC+3 (Москва)</option></select></label>
+                                <label>Аватар<input type="file" /></label>
+                                <button class="btn primary">Сохранить</button>
+                            </form>
+                        </div>
+                        <div class="card">
+                            <header><h2>Безопасность</h2></header>
+                            <div class="security">
+                                <div>
+                                    <h3>Пароль</h3>
+                                    <p>Последнее изменение: 12 дней назад</p>
+                                    <button class="btn secondary">Обновить</button>
+                                </div>
+                                <div>
+                                    <h3>2FA</h3>
+                                    <p>Google Authenticator</p>
+                                    <button class="btn secondary">Настроить</button>
+                                </div>
+                                <div>
+                                    <h3>API ключи</h3>
+                                    <button class="btn primary small" id="generateApiKey">Создать</button>
+                                    <div id="apiKeys" class="api-keys"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <header><h2>Тарифы</h2></header>
+                            <div class="billing">
+                                <p>Текущий план: <strong>Pro</strong></p>
+                                <ul>
+                                    <li>Entry Points: 14 / 20</li>
+                                    <li>Маршруты: 34 / 100</li>
+                                    <li>Трафик: 2.3 ТБ из 5 ТБ</li>
+                                </ul>
+                                <button class="btn primary">Обновить план</button>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <header><h2>Уведомления</h2></header>
+                            <form class="notifications-form">
+                                <label><input type="checkbox" checked /> Email оповещения</label>
+                                <label><input type="checkbox" checked /> Telegram бот</label>
+                                <label><input type="checkbox" /> Discord webhook</label>
+                                <label><input type="checkbox" /> Slack webhook</label>
+                                <label>Частота<select><option>Мгновенно</option><option>Раз в час</option><option>Раз в день</option></select></label>
+                                <button class="btn primary">Сохранить</button>
+                            </form>
+                        </div>
+                        <div class="card">
+                            <header><h2>Команда</h2></header>
+                            <div class="team">
+                                <button class="btn primary" id="inviteMember">
+                                    <i data-lucide="user-plus"></i>
+                                    Добавить пользователя
+                                </button>
+                                <ul id="teamList"></ul>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <header><h2>Интеграции</h2></header>
+                            <ul class="integrations">
+                                <li>Cloudflare <button class="btn secondary small">Подключить</button></li>
+                                <li>Stripe <button class="btn secondary small">Настроить</button></li>
+                                <li>Grafana <button class="btn secondary small">Экспорт</button></li>
+                                <li>Prometheus <button class="btn secondary small">Метрики</button></li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="documentation" class="page">
+                    <div class="docs">
+                        <article class="card">
+                            <header><h2>Getting Started</h2></header>
+                            <ol>
+                                <li>Зарегистрируйте аккаунт и подтвердите email</li>
+                                <li>Добавьте первый Entry Point через мастер установки</li>
+                                <li>Создайте маршрут и настройте DNS (SRV + A записи)</li>
+                                <li>Отслеживайте трафик и атаки в real-time</li>
+                            </ol>
+                        </article>
+                        <article class="card">
+                            <header><h2>FAQ</h2></header>
+                            <details>
+                                <summary>Как подключить клиентов через SRV запись?</summary>
+                                <p>
+                                    Создайте SRV запись вида <code>_service._tcp.sub.example.com</code> указывая наши Entry Points.
+                                    Панель автоматически сгенерирует инструкции и проверит распространение DNS.
+                                </p>
+                            </details>
+                            <details>
+                                <summary>Нужно ли устанавливать софт на клиентских серверах?</summary>
+                                <p>Нет, только IP:порт. Весь anycast и защита выполняется на Entry Points.</p>
+                            </details>
+                            <details>
+                                <summary>Поддерживаются ли автоматические бэкапы?</summary>
+                                <p>Да, настройте расписание и хранилище (S3/B2) в разделе бэкапов.</p>
+                            </details>
+                        </article>
+                        <article class="card">
+                            <header><h2>API</h2></header>
+                            <p>
+                                Откройте <code>/docs</code> для Swagger UI. Используйте JWT авторизацию, а для
+                                автоматизации создавайте API ключи в настройках.
+                            </p>
+                        </article>
+                        <article class="card">
+                            <header><h2>Changelog</h2></header>
+                            <ul class="timeline">
+                                <li><strong>v1.0</strong> — Запуск системы Anycast без BGP</li>
+                                <li><strong>v1.1</strong> — WireGuard mesh &amp; Auto provisioning</li>
+                                <li><strong>v1.2</strong> — PWA и push уведомления</li>
+                            </ul>
+                        </article>
+                        <article class="card">
+                            <header><h2>Поддержка</h2></header>
+                            <form class="support">
+                                <label>Тема<input type="text" placeholder="Опишите проблему" /></label>
+                                <label>Сообщение<textarea rows="4" placeholder="Чем мы можем помочь?"></textarea></label>
+                                <button class="btn primary">Отправить</button>
+                            </form>
+                        </article>
+                        <article class="card">
+                            <header><h2>Видео гайд</h2></header>
+                            <div class="video-wrapper">
+                                <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" title="Anycast guide" allowfullscreen></iframe>
+                            </div>
+                        </article>
+                    </div>
+                </section>
+            </main>
+        </div>
     </div>
-    <script src="script.js"></script>
+
+    <!-- Modals -->
+    <div class="modal" id="entryPointModal" aria-hidden="true">
+        <div class="modal-content">
+            <header>
+                <h2>Новый Entry Point</h2>
+                <button class="icon-btn" data-close>
+                    <i data-lucide="x"></i>
+                </button>
+            </header>
+            <form id="entryPointForm" class="modal-form">
+                <label>Название<input name="name" placeholder="AMS-01" required /></label>
+                <label>Провайдер<select name="provider"><option>Hetzner</option><option>OVH</option><option>DigitalOcean</option><option>Vultr</option><option>Custom</option></select></label>
+                <label>Локация<input name="location" placeholder="Амстердам, NL" required /></label>
+                <label>IP адрес<input name="ip" placeholder="203.0.113.10" required pattern="^((25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})\.){3}(25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})$" /></label>
+                <label>SSH порт<input name="ssh_port" type="number" value="22" min="1" max="65535" /></label>
+                <label>Метод SSH
+                    <select name="ssh_method">
+                        <option value="password">Root пароль</option>
+                        <option value="key">SSH ключ</option>
+                    </select>
+                </label>
+                <label class="conditional" data-method="password">Пароль<input name="ssh_password" type="password" placeholder="••••••" /></label>
+                <label class="conditional" data-method="key">SSH ключ<textarea name="ssh_key" rows="4" placeholder="-----BEGIN PRIVATE KEY-----"></textarea></label>
+                <label>WireGuard порт<input name="wg_port" type="number" value="51820" min="1" max="65535" /></label>
+                <details>
+                    <summary>Дополнительно</summary>
+                    <label>Лимит трафика (ТБ)<input name="bandwidth" type="number" step="0.1" /></label>
+                    <label>Firewall правила<textarea name="firewall" rows="3"></textarea></label>
+                    <label>Автобэкапы<select name="backups"><option>Ежедневно</option><option>Еженедельно</option><option>Выключено</option></select></label>
+                </details>
+                <button class="btn primary" type="submit">Установить</button>
+            </form>
+            <div id="installationProgress" class="installation hidden">
+                <h3>Процесс установки</h3>
+                <ul class="progress-list"></ul>
+                <textarea readonly class="log"></textarea>
+                <button class="btn secondary" data-action="retry">Попробовать снова</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="routeWizard" aria-hidden="true">
+        <div class="modal-content wizard">
+            <header>
+                <h2>Новый маршрут</h2>
+                <button class="icon-btn" data-close>
+                    <i data-lucide="x"></i>
+                </button>
+            </header>
+            <div class="wizard-body">
+                <aside class="wizard-steps">
+                    <button class="step active" data-step="1">1. Поддомен</button>
+                    <button class="step" data-step="2">2. Сервер</button>
+                    <button class="step" data-step="3">3. Настройки</button>
+                    <button class="step" data-step="4">4. Entry Points</button>
+                    <button class="step" data-step="5">5. Проверка</button>
+                </aside>
+                <form id="routeForm" class="wizard-form">
+                    <section data-step="1" class="wizard-step active">
+                        <label>Поддомен<input name="subdomain" placeholder="play.example.com" required /></label>
+                        <div class="dns-check">
+                            <button type="button" class="btn secondary" id="checkDns">Проверить DNS</button>
+                            <button type="button" class="btn ghost" id="copyDns">Копировать настройки</button>
+                        </div>
+                        <p class="hint">Панель поддерживает автоматическую генерацию SRV записей для подключения клиентов.</p>
+                    </section>
+                    <section data-step="2" class="wizard-step">
+                        <label>IP адрес<input name="client_ip" placeholder="198.51.100.34" required /></label>
+                        <label>Порт<input name="client_port" type="number" value="25565" min="1" max="65535" required /></label>
+                        <button type="button" class="btn secondary" id="probeServer">Проверить доступность</button>
+                        <p class="hint">Автоопределение игры: Minecraft, FiveM, Rust, CS:GO и др.</p>
+                    </section>
+                    <section data-step="3" class="wizard-step">
+                        <label>Протокол
+                            <select name="protocol">
+                                <option value="tcp">TCP</option>
+                                <option value="udp">UDP</option>
+                                <option value="both">TCP + UDP</option>
+                            </select>
+                        </label>
+                        <label class="toggle">
+                            <input type="checkbox" name="haproxy" checked />
+                            <span>Включить HAProxy (PROXY v2)</span>
+                        </label>
+                        <label>Балансировка
+                            <select name="balancing">
+                                <option>Round Robin</option>
+                                <option>Least Connections</option>
+                                <option>IP Hash</option>
+                            </select>
+                        </label>
+                        <label>DDoS защита<select name="ddos"><option>Высокая</option><option>Средняя</option><option>Низкая</option><option>Выкл</option></select></label>
+                        <label>Rate limiting<input name="rate" type="number" placeholder="1000 req/s" /></label>
+                    </section>
+                    <section data-step="4" class="wizard-step">
+                        <label>Выберите Entry Points</label>
+                        <div id="entryPointSelector" class="selector-grid"></div>
+                        <canvas id="entryPointMap" height="160"></canvas>
+                    </section>
+                    <section data-step="5" class="wizard-step">
+                        <div class="summary" id="routeSummary"></div>
+                        <button class="btn primary" type="submit">Создать маршрут</button>
+                    </section>
+                </form>
+            </div>
+            <footer class="wizard-footer">
+                <button class="btn ghost" data-action="prev">Назад</button>
+                <button class="btn primary" data-action="next">Далее</button>
+            </footer>
+        </div>
+    </div>
+
+    <div class="dropdown" id="profileMenu" aria-hidden="true">
+        <button class="dropdown-item" data-action="profile">Профиль</button>
+        <button class="dropdown-item" data-action="settings">Настройки</button>
+        <button class="dropdown-item" data-action="logout">Выход</button>
+    </div>
+
+    <div class="toast-container" role="status" aria-live="polite"></div>
 </body>
 </html>

@@ -1,0 +1,55 @@
+version: "3.9"
+
+services:
+  api:
+    build: ./backend
+    env_file: .env
+    environment:
+      ANYCAST_SECRET_KEY: ${ANYCAST_SECRET_KEY}
+      ANYCAST_DATABASE_URL: ${ANYCAST_DATABASE_URL}
+      ANYCAST_REDIS_URL: ${ANYCAST_REDIS_URL}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+
+  frontend:
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+
+  celery:
+    build: ./backend
+    command: ["celery", "-A", "app.celery_app.celery", "worker", "--loglevel=info"]
+    env_file: .env
+    environment:
+      ANYCAST_SECRET_KEY: ${ANYCAST_SECRET_KEY}
+      ANYCAST_DATABASE_URL: ${ANYCAST_DATABASE_URL}
+      ANYCAST_REDIS_URL: ${ANYCAST_REDIS_URL}
+    depends_on:
+      - api
+      - redis
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: anycast
+      POSTGRES_USER: anycast
+      POSTGRES_PASSWORD: anycast
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  pgdata:

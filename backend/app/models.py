@@ -1,6 +1,16 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, JSON, String, Text
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    JSON,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -15,9 +25,14 @@ class User(Base):
     role = Column(String(32), default="owner")
     created_at = Column(DateTime, default=datetime.utcnow)
     api_key = Column(String(255), unique=True, nullable=True)
+    full_name = Column(String(255), nullable=True)
+    timezone = Column(String(64), nullable=True)
+    avatar_url = Column(String(512), nullable=True)
+    notification_settings = Column(JSON, nullable=True, default=dict)
 
     entry_points = relationship("EntryPoint", back_populates="owner")
     routes = relationship("Route", back_populates="owner")
+    alerts = relationship("Alert", back_populates="user")
 
 
 class EntryPoint(Base):
@@ -35,10 +50,18 @@ class EntryPoint(Base):
     provider = Column(String(64), nullable=True)
     specs = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    last_seen = Column(DateTime, default=datetime.utcnow)
 
     owner = relationship("User", back_populates="entry_points")
-    stats = relationship("Stat", back_populates="entry_point")
-    ddos_logs = relationship("DDoSLog", back_populates="entry_point")
+    stats = relationship("Stat", back_populates="entry_point", cascade="all, delete-orphan")
+    ddos_logs = relationship("DDoSLog", back_populates="entry_point", cascade="all, delete-orphan")
+    routes = relationship("RouteAssignment", back_populates="entry_point", cascade="all, delete-orphan")
+    install_events = relationship(
+        "EntryPointInstallEvent",
+        back_populates="entry_point",
+        order_by="EntryPointInstallEvent.created_at",
+        cascade="all, delete-orphan",
+    )
 
 
 class Route(Base):
@@ -56,6 +79,11 @@ class Route(Base):
     settings = Column(JSON, nullable=True)
 
     owner = relationship("User", back_populates="routes")
+    assignments = relationship(
+        "RouteAssignment",
+        back_populates="route",
+        cascade="all, delete-orphan",
+    )
 
 
 class Stat(Base):
@@ -107,6 +135,8 @@ class Alert(Base):
     read = Column(Boolean, default=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
+    user = relationship("User", back_populates="alerts")
+
 
 class Subscription(Base):
     __tablename__ = "subscriptions"
@@ -116,3 +146,40 @@ class Subscription(Base):
     plan = Column(String(64), default="free")
     limits = Column(JSON)
     expires_at = Column(DateTime, nullable=True)
+
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    token = Column(String(255), nullable=False, unique=True, index=True)
+    expires_at = Column(DateTime, default=lambda: datetime.utcnow() + timedelta(hours=1))
+
+
+class EntryPointInstallEvent(Base):
+    __tablename__ = "entry_point_install_events"
+
+    id = Column(Integer, primary_key=True)
+    entry_point_id = Column(Integer, ForeignKey("entry_points.id", ondelete="CASCADE"), nullable=False)
+    stage = Column(String(64), nullable=False)
+    status = Column(String(32), nullable=False, default="pending")
+    message = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    entry_point = relationship("EntryPoint", back_populates="install_events")
+
+
+class RouteAssignment(Base):
+    __tablename__ = "route_assignments"
+    __table_args__ = (
+        UniqueConstraint("route_id", "entry_point_id", name="uix_route_entry_point"),
+    )
+
+    id = Column(Integer, primary_key=True)
+    route_id = Column(Integer, ForeignKey("routes.id", ondelete="CASCADE"), nullable=False)
+    entry_point_id = Column(Integer, ForeignKey("entry_points.id", ondelete="CASCADE"), nullable=False)
+    weight = Column(Integer, default=1)
+
+    route = relationship("Route", back_populates="assignments")
+    entry_point = relationship("EntryPoint", back_populates="routes")

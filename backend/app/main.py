@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .api import admin, alerts, auth, entry_points, routes, settings, stats
 from .config import get_settings
+from .database import init_db
 
 settings = get_settings()
 
@@ -12,10 +13,14 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"]
-    ,
+    allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+def on_startup() -> None:
+    init_db()
 
 app.include_router(auth.router, prefix=settings.api_v1_prefix)
 app.include_router(entry_points.router, prefix=settings.api_v1_prefix)

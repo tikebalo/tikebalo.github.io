@@ -3,14 +3,15 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import EntryPoint, Route, User
+from ..schemas import UserOut
 from ..security import require_role
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_role("owner", "admin"))])
 
 
-@router.get("/users")
+@router.get("/users", response_model=list[UserOut])
 def users(db: Session = Depends(get_db)):
-    return db.query(User).all()
+    return [UserOut.from_orm(user) for user in db.query(User).all()]
 
 
 @router.get("/system-stats")

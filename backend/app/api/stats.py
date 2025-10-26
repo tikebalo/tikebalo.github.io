@@ -1,49 +1,131 @@
+from collections import Counter
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends
+from sqlalchemy import func
+from sqlalchemy.orm import Session
 
+from ..database import get_db
+from ..models import DDoSLog, EntryPoint, Stat
 from ..security import get_current_user
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
 
 @router.get("/overview")
-def overview(user=Depends(get_current_user)):
+def overview(db: Session = Depends(get_db), user=Depends(get_current_user)):
     now = datetime.utcnow()
+    traffic = (
+        db.query(func.sum(Stat.traffic_in + Stat.traffic_out))
+        .join(EntryPoint)
+        .filter(EntryPoint.user_id == user.id)
+        .filter(Stat.timestamp >= now - timedelta(hours=1))
+        .scalar()
+        or 0
+    )
+    connections = (
+        db.query(func.sum(Stat.connections))
+        .join(EntryPoint)
+        .filter(EntryPoint.user_id == user.id)
+        .filter(Stat.timestamp >= now - timedelta(hours=1))
+        .scalar()
+        or 0
+    )
+    entry_points_total = db.query(EntryPoint).filter(EntryPoint.user_id == user.id).count()
+    entry_points_online = (
+        db.query(EntryPoint)
+        .filter(EntryPoint.user_id == user.id, EntryPoint.status == "online")
+        .count()
+    )
+    ddos_blocked = (
+        db.query(func.sum(DDoSLog.packets_blocked))
+        .join(EntryPoint)
+        .filter(EntryPoint.user_id == user.id)
+        .scalar()
+        or 0
+    )
     return {
-        "traffic_gbps": 182.4,
-        "connections": 12482,
-        "entry_points": {"online": 14, "total": 15},
-        "ddos_blocked": 328,
+        "traffic_gbps": round(traffic / 1_000_000_000, 2),
+        "connections": int(connections),
+        "entry_points": {"online": entry_points_online, "total": entry_points_total},
+        "ddos_blocked": int(ddos_blocked),
         "timestamp": now,
     }
 
 
 @router.get("/traffic")
-def traffic(range: str = "1h", user=Depends(get_current_user)):
-    points = 60 if range == "1h" else 24 if range == "24h" else 7
-    return {
-        "range": range,
-        "points": [
-            {
-                "timestamp": datetime.utcnow() - timedelta(minutes=i * (60 // max(points, 1))),
-                "value": 150 + i,
-            }
-            for i in range(points)
-        ][::-1],
-    }
+def traffic(range: str = "1h", db: Session = Depends(get_db), user=Depends(get_current_user)):
+    now = datetime.utcnow()
+    if range == "1h":
+        interval = 5
+        total_points = 12
+    elif range == "24h":
+        interval = 60
+        total_points = 24
+    else:
+        interval = 6 * 60
+        total_points = 28
+
+    since = now - timedelta(minutes=interval * total_points)
+    stats = (
+        db.query(
+            func.date_trunc('minute', Stat.timestamp).label('bucket'),
+            func.sum(Stat.traffic_in + Stat.traffic_out).label('traffic'),
+        )
+        .join(EntryPoint)
+        .filter(EntryPoint.user_id == user.id)
+        .filter(Stat.timestamp >= since)
+        .group_by('bucket')
+        .order_by('bucket')
+        .all()
+    )
+
+    traffic_map = {row.bucket.replace(second=0, microsecond=0): row.traffic for row in stats}
+    points = []
+    current = since.replace(second=0, microsecond=0)
+    while current <= now:
+        points.append({
+            "timestamp": current,
+            "value": traffic_map.get(current, 0),
+        })
+        current += timedelta(minutes=interval)
+
+    return {"range": range, "points": points[-total_points:]}
 
 
 @router.get("/geo")
-def geo(user=Depends(get_current_user)):
-    return {"countries": [{"code": "RU", "traffic": 24}, {"code": "DE", "traffic": 18}, {"code": "US", "traffic": 16}]}
+def geo(db: Session = Depends(get_db), user=Depends(get_current_user)):
+    entry_points = db.query(EntryPoint.location, func.count(EntryPoint.id)).filter(EntryPoint.user_id == user.id).group_by(EntryPoint.location).all()
+    counter = Counter()
+    for location, count in entry_points:
+        country = location.split(",")[-1].strip() if location else "Unknown"
+        counter[country] += count
+    return {
+        "countries": [
+            {"code": country.upper()[:2], "traffic": value}
+            for country, value in counter.items()
+        ]
+    }
 
 
 @router.get("/ddos")
-def ddos(user=Depends(get_current_user)):
+def ddos(db: Session = Depends(get_db), user=Depends(get_current_user)):
+    logs = (
+        db.query(DDoSLog)
+        .join(EntryPoint)
+        .filter(EntryPoint.user_id == user.id)
+        .order_by(DDoSLog.timestamp.desc())
+        .limit(50)
+        .all()
+    )
     return {
         "attacks": [
-            {"type": "SYN flood", "source": "45.134.22.1", "packets": 2300000},
-            {"type": "UDP amp", "source": "103.23.5.21", "packets": 1100000},
+            {
+                "type": log.attack_type,
+                "source": log.source_ip,
+                "packets": log.packets_blocked,
+                "timestamp": log.timestamp,
+            }
+            for log in logs
         ]
     }

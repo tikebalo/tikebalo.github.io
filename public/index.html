@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Anycast Control Panel</title>
+  <link rel="icon" href="icon.png" type="image/png" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -47,11 +48,40 @@
 
       <section id="dashboard" class="hidden">
         <div class="top-bar">
-          <div>
-            <span class="label">Вы вошли как</span>
-            <span id="userEmail" class="strong"></span>
+          <div class="user-badge">
+            <span class="avatar" aria-hidden="true">☍</span>
+            <div>
+              <span class="label">Вы вошли как</span>
+              <span id="userEmail" class="strong"></span>
+            </div>
           </div>
-          <button id="logoutBtn" class="outline">Выйти</button>
+          <div class="top-actions">
+            <button id="refreshBtn" class="outline">Обновить данные</button>
+            <button id="logoutBtn" class="outline">Выйти</button>
+          </div>
+        </div>
+
+        <div id="statsGrid" class="stats-grid">
+          <article class="stat-card">
+            <span class="stat-label">Entry Points</span>
+            <span id="statEntryPoints" class="stat-value">0</span>
+            <span class="stat-foot">Активных нод</span>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">Маршруты</span>
+            <span id="statRoutes" class="stat-value">0</span>
+            <span class="stat-foot">Обслуживаемые сервисы</span>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">HAProxy</span>
+            <span id="statProxy" class="stat-value">0</span>
+            <span class="stat-foot">TCP маршрутов через прокси</span>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">UDP узлы</span>
+            <span id="statUdp" class="stat-value">0</span>
+            <span class="stat-foot">Маршрутов с UDP</span>
+          </article>
         </div>
 
         <div class="columns">
@@ -121,6 +151,12 @@
     </main>
 
     <div id="toast" class="toast hidden"></div>
+    <div id="loadingOverlay" class="overlay hidden">
+      <div class="overlay-card">
+        <div class="spinner" aria-hidden="true"></div>
+        <p id="overlayMessage">Обновление данных…</p>
+      </div>
+    </div>
   </div>
 
   <script src="script.js" defer></script>

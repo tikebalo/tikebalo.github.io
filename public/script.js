@@ -12,6 +12,7 @@ const elements = {
   loginTab: document.getElementById('loginTab'),
   registerTab: document.getElementById('registerTab'),
   userEmail: document.getElementById('userEmail'),
+  refreshBtn: document.getElementById('refreshBtn'),
   logoutBtn: document.getElementById('logoutBtn'),
   entryPointTableBody: document.querySelector('#entryPointTable tbody'),
   routeTableBody: document.querySelector('#routeTable tbody'),
@@ -19,6 +20,12 @@ const elements = {
   routeForm: document.getElementById('routeForm'),
   routeEntryPoints: document.getElementById('routeEntryPoints'),
   toast: document.getElementById('toast'),
+  statEntryPoints: document.getElementById('statEntryPoints'),
+  statRoutes: document.getElementById('statRoutes'),
+  statProxy: document.getElementById('statProxy'),
+  statUdp: document.getElementById('statUdp'),
+  overlay: document.getElementById('loadingOverlay'),
+  overlayMessage: document.getElementById('overlayMessage'),
 };
 
 function setToken(token) {
@@ -78,11 +85,24 @@ function showAuth() {
   currentUser = null;
   elements.dashboard.classList.add('hidden');
   elements.authView.classList.remove('hidden');
+  setLoading(false);
 }
 
 function showDashboard() {
   elements.authView.classList.add('hidden');
   elements.dashboard.classList.remove('hidden');
+}
+
+function setLoading(isLoading, message = 'Обновление данных…') {
+  if (!elements.overlay) return;
+  if (message) {
+    elements.overlayMessage.textContent = message;
+  }
+  if (isLoading) {
+    elements.overlay.classList.remove('hidden');
+  } else {
+    elements.overlay.classList.add('hidden');
+  }
 }
 
 function switchTab(target) {
@@ -106,6 +126,7 @@ async function restoreSession() {
   }
 
   try {
+    setLoading(true, 'Проверяем сессию…');
     currentUser = await api('/auth/me');
     elements.userEmail.textContent = currentUser.email;
     showDashboard();
@@ -118,14 +139,20 @@ async function restoreSession() {
 }
 
 async function loadData() {
-  const [entryPointResponse, routeResponse] = await Promise.all([
-    api('/entry-points'),
-    api('/routes'),
-  ]);
-  entryPoints = entryPointResponse;
-  routes = routeResponse;
-  renderEntryPoints();
-  renderRoutes();
+  try {
+    setLoading(true);
+    const [entryPointResponse, routeResponse] = await Promise.all([
+      api('/entry-points'),
+      api('/routes'),
+    ]);
+    entryPoints = entryPointResponse;
+    routes = routeResponse;
+    renderEntryPoints();
+    renderRoutes();
+    updateStats();
+  } finally {
+    setLoading(false);
+  }
 }
 
 function renderEntryPoints() {
@@ -178,6 +205,17 @@ function renderRoutes() {
   });
 }
 
+function updateStats() {
+  if (!elements.statEntryPoints) return;
+  const proxyCount = routes.filter((route) => route.use_haproxy && route.protocol.includes('tcp')).length;
+  const udpCount = routes.filter((route) => route.protocol.includes('udp')).length;
+
+  elements.statEntryPoints.textContent = entryPoints.length.toString();
+  elements.statRoutes.textContent = routes.length.toString();
+  elements.statProxy.textContent = proxyCount.toString();
+  elements.statUdp.textContent = udpCount.toString();
+}
+
 async function deleteEntryPoint(id) {
   try {
     await api(`/entry-points/${id}`, { method: 'DELETE' });
@@ -188,6 +226,7 @@ async function deleteEntryPoint(id) {
     }));
     renderEntryPoints();
     renderRoutes();
+    updateStats();
     showToast('Entry point удалён');
   } catch (error) {
     showToast(error.message);
@@ -199,6 +238,7 @@ async function deleteRoute(id) {
     await api(`/routes/${id}`, { method: 'DELETE' });
     routes = routes.filter((route) => route.id !== id);
     renderRoutes();
+    updateStats();
     showToast('Маршрут удалён');
   } catch (error) {
     showToast(error.message);
@@ -258,6 +298,7 @@ async function handleEntryPointCreate(event) {
     });
     entryPoints = [entryPoint, ...entryPoints];
     renderEntryPoints();
+    updateStats();
     event.currentTarget.reset();
     event.currentTarget.querySelector('[name="ssh_port"]').value = '22';
     showToast('Entry point создан');
@@ -281,6 +322,7 @@ async function handleRouteCreate(event) {
     });
     routes = [route, ...routes];
     renderRoutes();
+    updateStats();
     event.currentTarget.reset();
     elements.routeEntryPoints.selectedIndex = -1;
     const haproxyToggle = event.currentTarget.querySelector('[name="use_haproxy"]');
@@ -301,8 +343,15 @@ elements.logoutBtn.addEventListener('click', () => {
   setToken(null);
   entryPoints = [];
   routes = [];
+  updateStats();
   showAuth();
 });
+
+if (elements.refreshBtn) {
+  elements.refreshBtn.addEventListener('click', () => {
+    loadData().then(() => showToast('Данные обновлены')).catch((error) => showToast(error.message));
+  });
+}
 
 elements.loginTab.addEventListener('click', () => switchTab('login'));
 elements.registerTab.addEventListener('click', () => switchTab('register'));

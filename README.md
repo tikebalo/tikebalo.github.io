@@ -1,47 +1,43 @@
 # Anycast Control Panel
 
-Полноценная система управления "Anycast без BGP" с современным веб-интерфейсом и backend на FastAPI.
+Минимальный рабочий контроллер для персональной anycast-сети: FastAPI backend + статичный веб-интерфейс без заглушек.
 
 ## Возможности
-- Аутентификация с JWT и поддержкой refresh токенов
-- Управление Entry Points: автоматическая установка через SSH, WireGuard mesh, HAProxy и nftables
-- Мастер создания маршрутов с поддержкой SRV/A записей и продвинутых настроек балансировки
-- Real-time мониторинг (WebSocket, Celery задачи, Redis)
-- Аналитика трафика, отчёты, алерты и DDoS-дэшборд
-- Настройки профиля, тарифов, интеграций и командного доступа
-- Docker инфраструктура с PostgreSQL, Redis и Celery worker
+- Регистрация и вход с валидацией пароля, JWT хранится в браузере
+- CRUD по entry point нодам (название, IP, локация, статус)
+- CRUD по маршрутам c привязкой к выбранным entry points
+- Проверка форматов IP/поддоменов на сервере
+- Postgres (или SQLite по умолчанию) через SQLAlchemy
+- Docker-compose для запуска API, Postgres и фронтенда
 
 ## Структура проекта
 ```
-backend/        # FastAPI + Celery + SQLAlchemy
-frontend/       # Dockerfile для отдачи статических файлов панели
-public/         # HTML/CSS/JS интерфейс без сборщиков
+backend/        # FastAPI, SQLAlchemy, JWT
+frontend/       # Dockerfile для nginx
+public/         # HTML/CSS/JS без сборщиков
 ```
 
 ## Быстрый старт
-1. Создайте файл `.env` в корне:
+1. Создайте `.env` с параметрами подключения:
    ```env
    ANYCAST_SECRET_KEY=change_me
    ANYCAST_DATABASE_URL=postgresql+psycopg2://anycast:anycast@postgres:5432/anycast
-   ANYCAST_REDIS_URL=redis://redis:6379/0
    ```
-2. Запустите стек:
+   (при отсутствии переменной база будет создана в `backend/app/anycast.db`)
+2. Поднимите сервисы:
    ```bash
    docker compose up --build
    ```
-3. Панель будет доступна на `http://localhost:3000`, API — на `http://localhost:8000`.
+3. Откройте `http://localhost:3000` — зарегистрируйте пользователя и работайте с реальными данными.
 
-## Backend
-- FastAPI маршруты соответствуют требованиям: `/api/auth`, `/api/entry-points`, `/api/routes`, `/api/stats`, `/api/alerts`, `/api/settings`, `/api/admin`
-- Celery задачи: установка нод, распространение конфигов, сбор метрик, мониторинг здоровья, очистка статистики
-- PostgreSQL используется для хранения данных, Redis — для брокера и кэша
+## API
+- `POST /api/auth/register` — создать пользователя
+- `POST /api/auth/login` — получить JWT
+- `GET /api/auth/me` — информация о текущем пользователе
+- `GET/POST/PUT/DELETE /api/entry-points` — управление entry points
+- `GET/POST/PUT/DELETE /api/routes` — управление маршрутами
 
-## Frontend
-- Адаптивный интерфейс с темой по умолчанию (dark), поддержкой переключения и PWA подсказками
-- Компоненты для дашборда, таблиц нод/маршрутов, мастера маршрутов, мониторинга, аналитики и документации
-- Используются Tailwind-подобные приёмы, градиенты и lucide-иконки (через CDN), Chart.js для графиков
-
-## Дополнительно
-- Health-check endpoint: `/healthz`
-- Dockerfile для backend и frontend
-- Готовая конфигурация docker-compose для локального или production деплоя
+## Полезное
+- Health-check: `GET /healthz`
+- Все запросы, кроме регистрации/логина, требуют `Authorization: Bearer <token>`
+- Фронтенд обращается к API только после успешной аутентификации — фиктивных данных нет

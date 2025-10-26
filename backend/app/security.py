@@ -1,8 +1,7 @@
 from datetime import datetime, timedelta
-from typing import Any
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
@@ -13,20 +12,14 @@ from .models import User
 from .schemas import TokenPayload
 
 settings = get_settings()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.api_v1_prefix}/auth/login")
+auth_scheme = HTTPBearer(auto_error=False)
 password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-def create_token(subject: int, expires_delta: timedelta) -> str:
-    expire = datetime.utcnow() + expires_delta
+def create_access_token(subject: int) -> str:
+    expire = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
     to_encode = {"exp": expire, "sub": str(subject)}
     return jwt.encode(to_encode, settings.secret_key, algorithm="HS256")
-
-
-def create_tokens(user_id: int) -> dict[str, str]:
-    access = create_token(user_id, timedelta(minutes=settings.access_token_expire_minutes))
-    refresh = create_token(user_id, timedelta(minutes=settings.refresh_token_expire_minutes))
-    return {"access_token": access, "refresh_token": refresh}
 
 
 def verify_password(plain: str, hashed: str) -> bool:
@@ -37,23 +30,21 @@ def hash_password(password: str) -> str:
     return password_context.hash(password)
 
 
-def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)) -> User:
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(auth_scheme),
+    db: Session = Depends(get_db),
+) -> User:
+    if credentials is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing credentials")
+
+    token = credentials.credentials
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
         token_data = TokenPayload(**payload)
-    except JWTError as exc:  # pragma: no cover - runtime validation
+    except JWTError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token") from exc
 
     user = db.query(User).filter(User.id == token_data.sub).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     return user
-
-
-def require_role(*roles: str):
-    def wrapper(user: User = Depends(get_current_user)) -> User:
-        if roles and user.role not in roles:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
-        return user
-
-    return wrapper

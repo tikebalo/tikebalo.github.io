@@ -5,15 +5,10 @@ from pydantic import BaseSettings, Field
 class Settings(BaseSettings):
     app_name: str = "Anycast Control Panel"
     api_v1_prefix: str = "/api"
-    secret_key: str = Field(..., env="ANYCAST_SECRET_KEY")
-    access_token_expire_minutes: int = 30
-    refresh_token_expire_minutes: int = 60 * 24 * 7
-    postgres_dsn: str = Field(..., env="ANYCAST_DATABASE_URL")
-    redis_url: str = Field(..., env="ANYCAST_REDIS_URL")
-    smtp_host: str | None = Field(default=None, env="ANYCAST_SMTP_HOST")
-    smtp_user: str | None = Field(default=None, env="ANYCAST_SMTP_USER")
-    smtp_password: str | None = Field(default=None, env="ANYCAST_SMTP_PASSWORD")
-    smtp_from: str | None = Field(default=None, env="ANYCAST_SMTP_FROM")
+    secret_key: str = Field("change-me", env="ANYCAST_SECRET_KEY")
+    access_token_expire_minutes: int = Field(60 * 24, ge=1)
+    database_url: str = Field("sqlite:///./anycast.db", env="ANYCAST_DATABASE_URL")
+    cors_origins: list[str] = Field(default_factory=lambda: ["*"])
 
     class Config:
         case_sensitive = False

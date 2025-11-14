@@ -1,0 +1,33 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from .api import auth, entry_points, routes
+from .config import get_settings
+from .database import init_db
+
+settings = get_settings()
+
+app = FastAPI(title=settings.app_name)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins if settings.cors_origins != ["*"] else ["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.on_event("startup")
+def on_startup() -> None:
+    init_db()
+
+
+app.include_router(auth.router, prefix=settings.api_v1_prefix)
+app.include_router(entry_points.router, prefix=settings.api_v1_prefix)
+app.include_router(routes.router, prefix=settings.api_v1_prefix)
+
+
+@app.get("/healthz")
+def healthcheck() -> dict[str, str]:
+    return {"status": "ok"}

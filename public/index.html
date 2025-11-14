@@ -1,21 +1,164 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GML Launcher Registration</title>
-    <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anycast Control Panel</title>
+  <link rel="icon" href="icon.png" type="image/png" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <div class="container">
-        <img src="icon.png" alt="Logo" class="logo" />
-        <form id="registerForm" class="form">
-            <input type="text" id="username" placeholder="Логин" required />
-            <input type="password" id="password" placeholder="Пароль" required />
-            <button type="submit" class="btn">Зарегистрироваться</button>
+  <div class="app">
+    <header class="app-header">
+      <h1>Anycast Control Panel</h1>
+      <p>Управляйте entry point нодами и маршрутами без фиктивных данных.</p>
+    </header>
+
+    <main>
+      <section id="authView" class="card">
+        <div class="tabs">
+          <button id="loginTab" class="tab active" type="button">Вход</button>
+          <button id="registerTab" class="tab" type="button">Регистрация</button>
+        </div>
+        <form id="loginForm" class="form">
+          <label>
+            Email
+            <input type="email" name="email" required />
+          </label>
+          <label>
+            Пароль
+            <input type="password" name="password" minlength="8" required />
+          </label>
+          <button type="submit">Войти</button>
+          <p class="form-hint">Используйте существующий аккаунт. Пароль проверяется на бэкенде.</p>
         </form>
-        <a href="/download" class="btn download">Скачать лаунчер</a>
+
+        <form id="registerForm" class="form hidden">
+          <label>
+            Email
+            <input type="email" name="email" required />
+          </label>
+          <label>
+            Пароль
+            <input type="password" name="password" minlength="8" required />
+          </label>
+          <button type="submit">Создать аккаунт</button>
+        </form>
+      </section>
+
+      <section id="dashboard" class="hidden">
+        <div class="top-bar">
+          <div class="user-badge">
+            <span class="avatar" aria-hidden="true">☍</span>
+            <div>
+              <span class="label">Вы вошли как</span>
+              <span id="userEmail" class="strong"></span>
+            </div>
+          </div>
+          <div class="top-actions">
+            <button id="refreshBtn" class="outline">Обновить данные</button>
+            <button id="logoutBtn" class="outline">Выйти</button>
+          </div>
+        </div>
+
+        <div id="statsGrid" class="stats-grid">
+          <article class="stat-card">
+            <span class="stat-label">Entry Points</span>
+            <span id="statEntryPoints" class="stat-value">0</span>
+            <span class="stat-foot">Активных нод</span>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">Маршруты</span>
+            <span id="statRoutes" class="stat-value">0</span>
+            <span class="stat-foot">Обслуживаемые сервисы</span>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">HAProxy</span>
+            <span id="statProxy" class="stat-value">0</span>
+            <span class="stat-foot">TCP маршрутов через прокси</span>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">UDP узлы</span>
+            <span id="statUdp" class="stat-value">0</span>
+            <span class="stat-foot">Маршрутов с UDP</span>
+          </article>
+        </div>
+
+        <div class="columns">
+          <section class="card">
+            <h2>Entry Points</h2>
+            <form id="entryPointForm" class="form inline">
+              <input type="text" name="name" placeholder="Название" required />
+              <input type="text" name="location" placeholder="Локация" required />
+              <input type="text" name="ip" placeholder="Публичный IP" required />
+              <input type="number" name="ssh_port" placeholder="SSH порт" min="1" max="65535" value="22" required />
+              <select name="status">
+                <option value="online">Online</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="offline">Offline</option>
+              </select>
+              <button type="submit">Добавить</button>
+            </form>
+            <table class="data-table" id="entryPointTable">
+              <thead>
+                <tr>
+                  <th>Название</th>
+                  <th>Локация</th>
+                  <th>IP</th>
+                  <th>Статус</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </section>
+
+          <section class="card">
+            <h2>Маршруты</h2>
+            <form id="routeForm" class="form inline">
+              <input type="text" name="subdomain" placeholder="Поддомен" required />
+              <input type="text" name="client_ip" placeholder="IP backend" required />
+              <input type="number" name="client_port" placeholder="Порт" min="1" max="65535" required />
+              <select name="protocol">
+                <option value="tcp">TCP</option>
+                <option value="udp">UDP</option>
+                <option value="tcp+udp">TCP+UDP</option>
+              </select>
+              <label class="checkbox">
+                <input type="checkbox" name="use_haproxy" checked /> HAProxy включён
+              </label>
+              <label>
+                Entry Points
+                <select id="routeEntryPoints" name="entry_points" multiple></select>
+              </label>
+              <button type="submit">Создать маршрут</button>
+            </form>
+            <table class="data-table" id="routeTable">
+              <thead>
+                <tr>
+                  <th>Поддомен</th>
+                  <th>Назначение</th>
+                  <th>Протокол</th>
+                  <th>Entry Points</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast hidden"></div>
+    <div id="loadingOverlay" class="overlay hidden">
+      <div class="overlay-card">
+        <div class="spinner" aria-hidden="true"></div>
+        <p id="overlayMessage">Обновление данных…</p>
+      </div>
     </div>
-    <script src="script.js"></script>
+  </div>
+
+  <script src="script.js" defer></script>
 </body>
 </html>
